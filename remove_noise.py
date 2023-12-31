@@ -1,34 +1,42 @@
 #!/usr/bin/env python3
 
+import lightkurve as lk
+import matplotlib.pyplot as plt
+import numpy as np
+from statistics import mode, mean
 
-def subsection(lightcurve, timearr):
-    """Create 4 day sections from full time series.
-    lightcurve is lightcurve object,
-    timearr is the time array from lightcurve object"""
 
-    # truncate into 4 day sections into wholelst
-    wholelst = []
-    for i in range(int(timearr[0]), int(timearr[-1]), 4):
-        sublist = lightcurve.truncate(i, i + 4)
-        wholelst.append(len(sublist))
+def get_subsection(lightcurve, timearr):
+    """
+    Create 4 day sections from full time series. lightcurve is lightcurve
+    object, timearr is the time array from lightcurve object
+    """
+
+    # Truncate into 4 day sections into whole_lst
+    whole_lst = [
+        len(lightcurve.truncate(i, i + 4)) 
+        for i in range(int(timearr[0]), int(timearr[-1]), 4)
+    ]
 
     # Find modal length of list of sections
-    modelen = mode(wholelst)
+    mode_len = mode(whole_lst)
 
-    # Split lightcurve into sections of modelen
-    subsec = []
-    for j in range(0, len(lightcurve), modelen):
-        subsec.append(lightcurve[j : j + modelen])
+    # Split lightcurve into sections of mode_len
+    subsec = [
+        lightcurve[j : j + mode_len] for j in range(0, len(lightcurve), mode_len)
+    ]
+    
     # Remove final value from array (which is not of the same length?)
     subsec.pop(-1)
     return subsec
 
 
-def signaltonoise(Arr, axis=0, ddof=0):
-    """Obtain the signaltonoise ratio of each time series.
-    Arr is array of sample data,
-    axis is axis along which to operate,
-    ddof is degrees of freedom correction for standard deviation"""
+def signal_to_noise(Arr, axis=0, ddof=0):
+    """
+    Obtain the signaltonoise ratio of each time series.  Arr is array of sample
+    data, axis is axis along which to operate, ddof is degrees of freedom
+    correction for standard deviation
+    """
 
     Arr = np.asanyarray(Arr)
     me = Arr.mean(axis)
@@ -36,62 +44,59 @@ def signaltonoise(Arr, axis=0, ddof=0):
     return np.where(sd == 0, 0, me / sd)
 
 
-def removenoise(sections, N=None):
-    """Remove noisy timeseries.
-    sections is list of sections created from subsection(),
-    N is number of noisy sections removed. If no N chosen, removes upper few from sorted signaltonoise list
+def remove_noise(sections, N=None, plot_noise=False):
+    """
+    Remove noisy timeseries.  sections is list of sections created from
+    get_subsection(), N is number of noisy sections removed. If no N chosen,
+    removes upper few from sorted signaltonoise list
     """
 
-    # Appends signal to noise ratio value to a list called snrs
-    snrs = []
-    for i in range(len(sections)):
-        # print(signaltonoise(subs[i].flux.value,axis=0,ddof=0))
-        snrs.append(signaltonoise(sections[i].flux.value, axis=0, ddof=0))
+    # Get signal to noise ratio values
+    snrs = [
+        signal_to_noise(sec.flux.value, axis=0, ddof=0) for sec in sections
+    ]
 
     # Sort the snrs list in order of smallest to largest
     snrs = np.array(snrs)
-    snrssort = np.sort(snrs)
+    snrs_sort = np.sort(snrs)
 
+    percentage = 0.08
+    noise_div = percentage * (max(snrs_sort) - min(snrs_sort))
+    
+    
+    # Plotting noise vs time arrays
+    if plot_noise:
+        currentfig = plt.gcf().number + 1
+        fig = plt.figure(currentfig)
+        x = np.linspace(1,len(snrs_sort),len(snrs_sort))
+        plt.axhline(mean(snrs_sort), color='r')
+        plt.text(5, mean(snrs_sort), 'Mean')
+        plt.axhline(mean(snrs_sort) + noise_div)
+        plt.text(5, (mean(snrs_sort) + noise_div), 'Noise deviation')
+        plt.scatter(x,snrs_sort)
+        plt.xlabel('Sorted time arrays')
+        plt.ylabel('Noise')
+    
+    # Remove upper few from sorted signal_to_noise list
     if N == None:
-        ##Plotting noise vs time arrays##
-        # currentfig = plt.gcf().number + 1
-        # fig = plt.figure(currentfig)
-        # x = np.linspace(1,len(snrssort),len(snrssort))
-        # plt.axhline(mean(snrssort))
-        # plt.axhline((mean(snrssort)+(0.08 * (max(snrssort) - min(snrssort)))))
-        # plt.scatter(x,snrssort)
-        # plt.xlabel('Sorted time arrays')
-        # plt.ylabel('Noise')
-        notnoisylst = []
-        for i in snrssort:
-            if i < (mean(snrssort) + (0.05 * (max(snrssort) - min(snrssort)))):
-                notnoisylst.append(i)
-        N = len(snrssort) - len(notnoisylst)
+        not_noisy_lst = [
+            i for i in snrs_sort if i < (mean(snrs_sort) + noise_div)
+        ]
+        N = len(snrs_sort) - len(not_noisy_lst)
 
     print("Number of noisy sections removed: ", N)
 
     # Find the index of the last N number of noisiest signals
-    noisy = []
-    for i in range(len(snrssort) - N, len(snrssort)):
-        tempidx = np.where(snrs == snrssort[i])[0][0]
-        noisy.append(tempidx)
+    noisy = [
+        np.where(snrs == snrs_sort[i])[0][0] for i in range(len(snrs_sort) - N, len(snrs_sort))
+    ]
 
     # Find the index of the signals up to last series - N
-    notnoisy = []
-    for i in range(0, len(snrssort) - N):
-        tempidx1 = np.where(snrs == snrssort[i])[0][0]
-        notnoisy.append(tempidx1)
-    notnoisy = np.sort(notnoisy)
-    return notnoisy
+    not_noisy = [
+        np.where(snrs == snrs_sort[i])[0][0] for i in range(0, len(snrs_sort - N))
+    ]
+
+    not_noisy = np.sort(not_noisy)
+    return not_noisy
 
 
-###Obtain flux and time values from time series###
-intensity = lc.flux.value
-dt = lc.time.value
-print(intensity, dt)
-
-###Create 4 day subsections from lightkurve object###
-subs = subsection(lc, dt)
-
-###Remove noisy timeseries###
-notnoisy = removenoise(subs)

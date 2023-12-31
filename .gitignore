@@ -1,0 +1,8 @@
+
+.venv/
+.ipynb_checkpoints/
+.jupyter.log
+__pycache__/
+
+
+*.png

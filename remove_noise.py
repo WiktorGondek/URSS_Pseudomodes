@@ -84,7 +84,7 @@ def remove_noise(sections, N=None, plot_noise=False):
         ]
         N = len(snrs_sort) - len(not_noisy_lst)
 
-    print("Number of noisy sections removed: ", N)
+    #print("Number of noisy sections removed: ", N)
 
     # Find the index of the last N number of noisiest signals
     noisy = [

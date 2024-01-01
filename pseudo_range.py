@@ -56,32 +56,10 @@ def pseudo_range(freq_edge, ps_edge, peak_freqs, delta_nu, init_int, fin_int):
     return pseudo_dict
 
 
-def plotpseudorange(freq_edge, ps_edge, pseu_freqs, pseu_pow, first_peak):
+def legendre_detrend(x, y, order):
     """
-    Plot pseudomode range. freq_edge and ps_edge are the smoothed (with edges
-    removed) frequency and power arrays, pseu_freqs, pseu_pow are the pseudomode
-    range frequency and power lists first_peak is index of where first peak in
-    range occurs.
-    """
-    currentfig = plt.gcf().number + 1
-    fig = plt.figure(currentfig)
-
-    plt.plot(freq_edge, ps_edge, "r-", linewidth=1)
-    plt.plot(freq_edge[first_peak], ps_edge[first_peak], "x")
-    plt.xlabel("Frequency [{}Hz]".format(chr(956)))
-    plt.ylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
-    for i in reversed(range(0, len(pseu_freqs))):
-        plt.plot(pseu_freqs[i], pseu_pow[i], linewidth=0.5)
-
-
-#####################Detrending the pseudomoderange############################
-
-
-def Legendredetrend(x, y, order, ints, plotting):
-    """
-    Plotting smoothed in pseudomode range with legendre fits and detrending.
-    x,y are x and y data, order is the polynomial order, ints is the list
-    integer p-mode spacings, plotting boolean, if True will plot
+    Detrend data with Legendre polynomial fit. x, y is data to be input, order
+    is the order of legendre polynomial.
     """
 
     # Making legendre fit
@@ -89,37 +67,6 @@ def Legendredetrend(x, y, order, ints, plotting):
     leg_val = L.legval(x, leg_fit)
     detrended = np.log(y) - leg_val
 
-    if plotting == True:
-        fig, axes = plt.subplots(nrows=2, sharex=True)
-        axes[0].plot(x, np.log(y), "r-", linewidth=0.5)
-        axes[0].plot(x, leg_val, "--b")  # ,label='Order {}'.format(order))
-        # axes[0].legend()
-        axes[0].set_ylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
-        axes[1].plot(x, detrended, "r-", linewidth=0.5, label=ints)
-        axes[1].legend()
-        axes[1].set_ylabel("Power detrended")
-        plt.xlabel("Frequency [{}Hz]".format(chr(956)))
-        plt.title("Detrended")
-    return detrended
+    detrend_dict = {"leg_fit": leg_fit, "leg_val": leg_val, "detrended": detrended}
 
-
-# Obtaining the detrended pseudomode range
-def detrend(pseu_freqs, pseu_powers, ints, plotting):
-    """
-    Obtaining the detrended pseudomode range. pseu_freqs,pseu_powers are the
-    pseudomode range frequency and power lists, ints is list of integer p-mode
-    spacings, plotting noolean, if True will plot
-    """
-    # Set the polynomial order
-    polyorder = 2
-
-    # Detrend the pseudomode range
-    detrended = [
-        Legendredetrend(pseu_freqs[i], pseu_powers[i], 2, ints[i], plotting=plotting)
-        for i in range(len(pseu_freqs))
-    ]
-
-    # Rescaling the frequencies into Hz from muHz to be able to FT using LombScargle
-    freqrescale = [i * 1e-6 for i in pseu_freqs]
-
-    return detrended, freqrescale
+    return detrend_dict

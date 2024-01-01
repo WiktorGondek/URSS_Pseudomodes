@@ -12,9 +12,10 @@ import pickle
 from scipy.signal import find_peaks
 import sys
 
+from plotting import plot_pseudo_range, plot_legendre
+from pseudo_range import pseudo_range, legendre_detrend
 from remove_noise import get_subsection, remove_noise
 from smoothing import remove_edge, plot_smoothed
-from pseudo_range import pseudo_range, plotpseudorange, Legendredetrend, detrend
 
 
 def get_time_series(star, output_file):
@@ -111,7 +112,9 @@ def main(star, output_file, cache=True):
     plot_smoothed(
         freqs[0], power_avg, smoothed_ps, freq_edge, ps_edge, peak_vals, peak_heights
     )
+
     dnu = 33.77942877988895
+
     # Defining the pseudomode range
     p_dict = pseudo_range(freq_edge, ps_edge, peak_vals, dnu, init_int=5, fin_int=7)
     pseudo_freqs, pseudo_power, first_peak, integer = (
@@ -122,10 +125,26 @@ def main(star, output_file, cache=True):
     )
 
     # Plotting the pseudomode range
-    # plotpseudorange(freq_edge, ps_edge, pseudo_freqs, pseudo_power, first_peak)
+    plot_pseudo_range(freq_edge, ps_edge, pseudo_freqs, pseudo_power, first_peak)
 
     # Detrended pseudomode range
-    detrended, freqrescale = detrend(pseudo_freqs, pseudo_power, integer, plotting=True)
+    leg_fit = [
+        legendre_detrend(pseudo_freqs[i], pseudo_power[i], order=2)
+        for i in range(len(integer))
+    ]
+
+    # Plot legendre
+    legendre_plots = [
+        plot_legendre(
+            pseudo_freqs[i],
+            pseudo_power[i],
+            leg_fit[i]["leg_val"],
+            leg_fit[i]["detrended"],
+            2,
+            integer[i],
+        )
+        for i in range(len(integer))
+    ]
 
     plt.show()
 

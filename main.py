@@ -4,7 +4,9 @@ import argparse
 from astropy.convolution import Box1DKernel, convolve
 import lightkurve as lk
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import cm
 import numpy as np
+from numpy.polynomial import legendre as L
 from pathlib import Path
 import pickle
 from scipy.signal import find_peaks
@@ -12,6 +14,7 @@ import sys
 
 from remove_noise import get_subsection, remove_noise
 from smoothing import remove_edge, plot_smoothed
+from pseudo_range import pseudo_range, plotpseudorange, Legendredetrend, detrend
 
 
 def get_time_series(star, output_file):
@@ -61,6 +64,7 @@ def create_power_spectra(sub_ts, not_noisy_ts, min_freq, max_freq):
 
 
 def main(star, output_file, cache=True):
+    # Load file from cache if it exists
     cache_file = Path(f".{star.lower().replace(' ', '_')}.pkl")
     if cache and cache_file.exists():
         with open(cache_file, "rb") as fh:
@@ -107,6 +111,23 @@ def main(star, output_file, cache=True):
     plot_smoothed(
         freqs[0], power_avg, smoothed_ps, freq_edge, ps_edge, peak_vals, peak_heights
     )
+    dnu = 33.77942877988895
+    # Defining the pseudomode range
+    p_dict = pseudo_range(freq_edge, ps_edge, peak_vals, dnu, init_int=5, fin_int=7)
+    pseudo_freqs, pseudo_power, first_peak, integer = (
+        p_dict["freqs"],
+        p_dict["power"],
+        p_dict["first_peak"],
+        p_dict["integer"],
+    )
+
+    # Plotting the pseudomode range
+    # plotpseudorange(freq_edge, ps_edge, pseudo_freqs, pseudo_power, first_peak)
+
+    # Detrended pseudomode range
+    detrended, freqrescale = detrend(pseudo_freqs, pseudo_power, integer, plotting=True)
+
+    plt.show()
 
 
 if __name__ == "__main__":

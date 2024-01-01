@@ -1,53 +1,50 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
+
+from scipy.signal import find_peaks
+import matplotlib.pyplot as plt
 
 
-def smooth(power,width):
-    '''Smooth power spectrum with 1d box kernel.
-    power is the power list, 
-    width is width of box kernel'''
-    box = Box1DKernel(width)
-    conv = convolve(power,box, boundary='wrap', nan_treatment='interpolate')
-    return conv
+def take_edges(x, percent):
+    """
+    Remove some percentage of full range from the edges of data,
+    x is the list of sample data, percent is the percentage of the length
+    of list to remove from each end
+    """
 
-def takeedges(x,percent):
-    '''Remove some percentage of full range from the edges of data.
-    x is the list of sample data
-    percent is the percentage of the length of list to remove from each end'''
     length = int(len(x) * percent)
-    newx = x[0 + length: len(x) - length]
+    newx = x[0 + length : len(x) - length]
     return newx
 
-def removeedge(avgpwr,frqs,edges,box_width):
-    '''Smooth and remove edges.
-    avgpor is the average power list,
-    frqs is the frequency list,
-    edges sets percentage to remove from the ends,
-    box_width sets the width of the box kernel for smoothing'''
-    z = smooth(avgpwr,box_width)
-    zedge = takeedges(z,edges)
-    freqedge = takeedges(frqs,edges)
-    return z,zedge,freqedge
 
-def peakvalue(x,y,height,tshold=None,dst=None,prmnce=None,wdth=None):
-    '''Return the frequency of peak value.
-    [0] is index, [1] is the x value, [2] is the y value'''
-    xpeakidx = []
-    xpeakval = []
-    xpeakheight = []
-    peaks = find_peaks(y,height,threshold=tshold,distance=dst,prominence=prmnce,width=wdth)
-    for i in peaks:
-        xpeakidx.append(i)
-    for j in xpeakidx[0]:
-        xpeakval.append(x[j])
-    for k in peaks[1]['peak_heights']:
-        xpeakheight.append(k)
-    #xpeakheightsort = np.sort(xpeakheight)
-    return [xpeakidx[0],xpeakval,xpeakheight]#xpeakheightsort[0]]
+def remove_edge(convolved, frqs, percent):
+    """
+    Smooth and remove edges. avgpor is the average power list,
+    frqs is the frequency list, edges sets percentage to remove from the ends,
+    box_width sets the width of the box kernel for smoothing
+    """
+    ps_edge = take_edges(convolved, percent)
+    freq_edge = take_edges(frqs, percent)
+    return ps_edge, freq_edge
 
 
-# M: for a bit more flexibility, you can define your figure outside
-# of the function and pass the figure and axis as argument. This allows
-# you to further customise it outside of the function, i.e.
-# - def Plotsmoothed(fig,ax,frq,powavg,powsmooth,frqedge,powsmoothedge,pspeakfrq,pspeakheights):
-# - create fig outside func: fig,ax = ...
-# - the call: Pltsmoothed(fig,ax,...)
+def plot_smoothed(
+    frq, pow_avg, pow_smooth, frq_edge, pow_smooth_edge, peak_frq, peak_heights
+):
+    """Plot unsmoothed and smoothed power spectra showing peaks.
+    frq,pow_avg are the frequency and power lists,
+    pow_smooth is the smoothed power list,
+    freqedge, pow_smooth_edge are the smoothed with edges removed frequency and power arrays,
+    peak_frq, peak_heights are the frequencies and heights of the peaks in the power spectrum.
+    """
+    
+    # Plotting the smoothed lightkurve power spectra###
+    fig, axs = plt.subplots(2, sharex=True)
+    axs[0].plot(frq, pow_avg, linewidth=0.5)
+    axs[0].set_title("Averaged power spectrum")
+    axs[1].plot(frq, pow_smooth, linewidth=0.5)
+    axs[1].plot(frq_edge, pow_smooth_edge, "r-", linewidth=0.5)
+    axs[1].plot(peak_frq, peak_heights, "x")
+    axs[1].set_title("Smoothed averaged power spectrum")
+    plt.xlabel("Frequency [{}Hz]".format(chr(956)))
+    fig.supylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
+    # axes[0].set_ylabel('Power [ppm$^{}$/{}Hz]'.format(str({2}),chr(956)))

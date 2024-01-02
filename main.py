@@ -2,6 +2,7 @@
 
 import argparse
 from astropy.convolution import Box1DKernel, convolve
+from astropy.timeseries import LombScargle
 import lightkurve as lk
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
@@ -12,7 +13,7 @@ import pickle
 from scipy.signal import find_peaks
 import sys
 
-from plotting import plot_pseudo_range, plot_legendre
+from plotting import plot_pseudo_range, plot_legendre, plot_power_spectrum
 from pseudo_range import pseudo_range, legendre_detrend
 from remove_noise import get_subsection, remove_noise
 from smoothing import remove_edge, plot_smoothed
@@ -64,6 +65,14 @@ def create_power_spectra(sub_ts, not_noisy_ts, min_freq, max_freq):
     return pg_whole
 
 
+def give_peaks(x, y, height, distance=None):
+    peaks = find_peaks(y, height=height, distance=distance)
+    peak_vals = [x[i] for i in peaks[0]]
+    peak_heights = [i for i in peaks[1]["peak_heights"]]
+
+    return peak_vals, peak_heights
+
+
 def main(star, output_file, cache=True):
     # Load file from cache if it exists
     cache_file = Path(f".{star.lower().replace(' ', '_')}.pkl")
@@ -76,7 +85,7 @@ def main(star, output_file, cache=True):
             pickle.dump(lc, fh)
 
     # Obtain flux and time values from time series
-    intensity, dt = lc.flux.value, lc.time.value
+    dt, intensity = lc.time.value, lc.flux.value
 
     # Create 4 day subsections from lightkurve object
     subs = get_subsection(lc, dt)
@@ -88,8 +97,8 @@ def main(star, output_file, cache=True):
     pg_whole = create_power_spectra(subs, notnoisy, min_freq=920, max_freq=1500)
 
     # Adding the powers and frequencies from periodogram into a list to average
-    powers, freqs = np.moveaxis(
-        [(pg.power.value, pg.frequency.value) for pg in pg_whole], 1, 0
+    freqs, powers = np.moveaxis(
+        [(pg.frequency.value, pg.power.value) for pg in pg_whole], 1, 0
     )
 
     # Averaging powers from lightkurve
@@ -104,9 +113,9 @@ def main(star, output_file, cache=True):
     ps_edge, freq_edge = remove_edge(smoothed_ps, freqs[0], percent=0.04)
 
     # Find peaks of power spectrum
-    peaks = find_peaks(ps_edge, height=np.mean(ps_edge), distance=5)
-    peak_vals = [freq_edge[i] for i in peaks[0]]
-    peak_heights = [i for i in peaks[1]["peak_heights"]]
+    peak_vals, peak_heights = give_peaks(
+        freq_edge, ps_edge, height=np.mean(ps_edge), distance=5
+    )
 
     # Plot smoothed power spectrum with peaks
     plot_smoothed(
@@ -132,6 +141,9 @@ def main(star, output_file, cache=True):
         legendre_detrend(pseudo_freqs[i], pseudo_power[i], order=2)
         for i in range(len(integer))
     ]
+    # Rescaling the frequencies into Hz from muHz to be able to
+    # FT using LombScargle
+    freq_rescale = [pseudo_freqs[i] * 1e-6 for i in range(len(integer))]
 
     # Plot legendre
     legendre_plots = [
@@ -146,6 +158,29 @@ def main(star, output_file, cache=True):
         for i in range(len(integer))
     ]
 
+    # FT of power spectra
+    power_spectrum = [
+        LombScargle(freq_rescale[i], leg_fit[i]["detrended"]).autopower(
+            samples_per_peak=1, nyquist_factor=1
+        )
+        for i in range(len(integer))
+    ]
+
+    # Frequencies and powers of the FT of power spectrum
+    ps_freqs = [i[0] for i in power_spectrum]
+    ps_powers = [i[1] for i in power_spectrum]
+
+    # Find peaks of FT
+    ps_peaks = [
+        give_peaks(ps_freqs[i], ps_powers[i], height=0.2) for i in range(len(integer))
+    ]
+
+    # Peaks of FT for each integer spacing
+    ps_peak_freqs = [i[0] for i in ps_peaks]
+    ps_peak_powers = [i[1] for i in ps_peaks]
+
+    # Plot FT of power spectrum
+    plot_power_spectrum(ps_freqs, ps_powers, ps_peak_freqs, ps_peak_powers, integer)
     plt.show()
 
 

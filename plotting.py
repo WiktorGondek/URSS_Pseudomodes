@@ -42,3 +42,22 @@ def plot_legendre(x, y, leg_val, detrended, order, ints):
     # axes[0].title("Detrended")
     plt.xlabel("Frequency [{}Hz]".format(chr(956)))
     plt.title("Detrended")
+
+
+def plot_power_spectrum(ps_freqs, ps_powers, peak_freqs, peak_heights, ints):
+    currentfig = plt.gcf().number + 1
+    cmap = plt.get_cmap("tab10")
+
+    # ps_peaks = find_peaks(powers, height)
+    # peaks = [freqs[i] for i in ps_peaks[0]]
+    # peak_heights = [i for i in peaks[1]["peak_heights"]]
+
+    for i in range(len(ps_freqs)):
+        fig = plt.figure(currentfig)
+        plt.plot(ps_freqs[i], ps_powers[i], label=ints[i], linewidth=0.7, c=cmap(i))
+        plt.plot(peak_freqs[i], peak_heights[i], "x", color="tab:red")
+        # plt.xlabel('1/Frequency [{}Hz00b1]'.format(chr(956)))
+        plt.xlabel("1/Frequency [{}Hz$^{}$]".format(chr(956), "{-1}"))
+        # plt.xlabel('1/Frequency [{}Hz $\mathregular{^{-1}}$]'.format(chr(956)))
+        plt.ylabel("Power")
+        plt.legend()

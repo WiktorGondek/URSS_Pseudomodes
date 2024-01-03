@@ -17,13 +17,14 @@ import sys
 from autocorrelation import get_values
 from plotting import (
     plot_time_series,
+    plot_smoothed,
     plot_pseudo_range,
     plot_legendre,
     plot_power_spectrum,
 )
 from pseudo_range import pseudo_range, legendre_detrend
 from remove_noise import get_subsection, remove_noise
-from smoothing import remove_edge, give_peaks, plot_smoothed
+from smoothing import remove_edge, give_peaks
 
 
 def get_time_series(star, output_file):
@@ -100,6 +101,10 @@ def get_arrays(pseudo_freqs, pseudo_power):
 
 
 def main(star, output_dir, cache=True):
+    output_dir_name = f"{output_dir}_{star.replace(' ','_')}"
+    if not Path(output_dir_name).exists():
+        Path(output_dir_name).mkdir(exist_ok=True, parents=True)
+
     # Load file from cache if it exists
     cache_file = Path(f".{star.lower().replace(' ', '_')}.pkl")
     if cache and cache_file.exists():
@@ -109,6 +114,8 @@ def main(star, output_dir, cache=True):
         lc = get_time_series(star, output_file)
         with open(cache_file, "wb") as fh:
             pickle.dump(lc, fh)
+
+    plot_time_series(lc, star, output_dir)
 
     # Obtain flux and time values from time series
     dt, intensity = lc.time.value, lc.flux.value
@@ -145,7 +152,15 @@ def main(star, output_dir, cache=True):
 
     # Plot smoothed power spectrum with peaks
     plot_smoothed(
-        freqs[0], power_avg, smoothed_ps, freq_edge, ps_edge, peak_vals, peak_heights
+        freqs[0],
+        power_avg,
+        smoothed_ps,
+        freq_edge,
+        ps_edge,
+        peak_vals,
+        peak_heights,
+        star,
+        output_dir,
     )
 
     dnu = 33.77942877988895
@@ -160,7 +175,9 @@ def main(star, output_dir, cache=True):
     )
 
     # Plotting the pseudomode range
-    plot_pseudo_range(freq_edge, ps_edge, pseudo_freqs, pseudo_power, first_peak)
+    plot_pseudo_range(
+        freq_edge, ps_edge, pseudo_freqs, pseudo_power, first_peak, star, output_dir
+    )
 
     # Defining list of power spectra
     ft_power_spectra = []
@@ -179,6 +196,8 @@ def main(star, output_dir, cache=True):
             leg_fit["detrended"],
             2,
             integer[i],
+            star,
+            output_dir,
         )
 
         # Performing FT of power spectra
@@ -202,7 +221,10 @@ def main(star, output_dir, cache=True):
     ps_peak_powers = [i[1] for i in ps_peaks]
 
     # Plotting power spectrum
-    plot_power_spectrum(ps_freqs, ps_powers, ps_peak_freqs, ps_peak_powers, integer)
+    plot_power_spectrum(
+        ps_freqs, ps_powers, ps_peak_freqs, ps_peak_powers, integer, star, output_dir
+    )
+
     plt.show()
 
 
@@ -222,7 +244,7 @@ def main(star, output_dir, cache=True):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("star")
-    parser.add_argument("output_file")
+    parser.add_argument("output_dir")
     args = parser.parse_args()
 
-    main(args.star, args.output_file)
+    main(args.star, args.output_dir)

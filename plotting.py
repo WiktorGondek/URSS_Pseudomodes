@@ -5,77 +5,105 @@ import numpy as np
 from numpy.polynomial import legendre as L
 
 
-def plot_time_series(lc, star):
+def plot_time_series(lc, star, output_dir):
+    """
+    Plot time series of star. lc is the light curve object containing the time
+    series, star is the name of the star imported, and output_dir is the final
+    output directory.
+    """
+
     fig, ax = plt.subplots()
     lc.plot(ax=ax)
-    fig.savefig(f"time_series_{star}.png")
-    # fig.savefig(f"{outputdir}/time_series_{star}.png")
+    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/time_series.png")
 
 
-def plot_pseudo_range(freq_edge, ps_edge, pseu_freqs, pseu_pow, first_peak):
+def plot_smoothed(
+    frq,
+    pow_avg,
+    pow_smooth,
+    frq_edge,
+    pow_smooth_edge,
+    peak_frq,
+    peak_heights,
+    star,
+    output_dir,
+):
+    """Plot unsmoothed and smoothed power spectra showing peaks.
+    frq,pow_avg are the frequency and power lists,
+    pow_smooth is the smoothed power list,
+    freqedge, pow_smooth_edge are the smoothed with edges removed frequency and power arrays,
+    peak_frq, peak_heights are the frequencies and heights of the peaks in the power spectrum.
     """
-    Plot pseudomode range. freq_edge and ps_edge are the smoothed (with edges
-    removed) frequency and power arrays, pseu_freqs, pseu_pow are the pseudomode
-    range frequency and power lists first_peak is index of where first peak in
+
+    # Plotting the smoothed lightkurve power spectra###
+    fig, ax = plt.subplots(2, sharex=True)
+    ax[0].plot(frq, pow_avg, linewidth=0.5)
+    ax[0].set_title("Averaged power spectrum")
+    ax[1].plot(frq, pow_smooth, linewidth=0.5)
+    ax[1].plot(frq_edge, pow_smooth_edge, "r-", linewidth=0.5)
+    ax[1].plot(peak_frq, peak_heights, "x")
+    ax[1].set_title("Smoothed averaged power spectrum")
+    ax[1].set(
+        xlabel=f"Frequency [{chr(956)}Hz]",
+        ylabel=f"Power [ppm$^{str({2})}$/{chr(956)}Hz]",
+    )
+    ax[0].set(ylabel=f"Power [ppm$^{str({2})}$/{chr(956)}Hz]")
+    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/smoothed.png")
+
+
+def plot_pseudo_range(
+    freqs, power, pseu_freqs, pseu_power, first_peak, star, output_dir
+):
+    """
+    Plot pseudomode range. freqs and power are the smoothed (with edges
+    removed) frequency and power arrays, pseu_freqs, pseu_power are the pseudomode
+    range frequency and power lists, first_peak is index of where first peak in
     range occurs.
     """
-    # currentfig = plt.gcf().number + 1
-    # fig = plt.figure(currentfig)
 
     fig, ax = plt.subplots()
-    ax.plot(freq_edge, ps_edge, "r-", linewidth=1)
-    ax.plot(freq_edge[first_peak], ps_edge[first_peak], "x")
-    ax.set_xlabel("Frequency [{}Hz]".format(chr(956)))
-    ax.set_ylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
+    ax.plot(freqs, power, "r-", linewidth=1)
+    ax.plot(freqs[first_peak], power[first_peak], "x")
     ax.set(
         xlabel=f"Frequency [{chr(956)}Hz]",
         ylabel=f"Power [ppm$^{str({2})}$/{chr(956)}Hz]",
     )
+    ax.set_title("Pseudomode range")
     for i in reversed(range(len(pseu_freqs))):
-        ax.plot(pseu_freqs[i], pseu_pow[i], linewidth=0.5)
-
-    # plt.plot(freq_edge, ps_edge, "r-", linewidth=1)
-    # plt.plot(freq_edge[first_peak], ps_edge[first_peak], "x")
-    # plt.xlabel("Frequency [{}Hz]".format(chr(956)))
-    # plt.ylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
-    # for i in reversed(range(0, len(pseu_freqs))):
-    #    plt.plot(pseu_freqs[i], pseu_pow[i], linewidth=0.5)
+        ax.plot(pseu_freqs[i], pseu_power[i], linewidth=0.5)
+    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/pseudo_range.png")
 
 
-def plot_legendre(x, y, leg_val, detrended, order, ints):
+def plot_legendre(x, y, leg_val, detrended, order, ints, star, output_dir):
     """
     Plotting smoothed spectra in pseudomode range with legendre fits and detrending.
     x,y are x and y data, order is the polynomial order, ints is the list
     integer p-mode spacings, plotting boolean, if True will plot
     """
 
-    fig, axes = plt.subplots(nrows=2, sharex=True)
-    axes[0].plot(x, np.log(y), "r-", linewidth=0.5)
-    axes[0].plot(x, leg_val, "--b")  # ,label='Order {}'.format(order))
-    # axes[0].legend()
-    axes[0].set_ylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
-    axes[1].plot(x, detrended, "r-", linewidth=0.5, label=ints)
-    axes[1].legend()
-    axes[1].set_ylabel("Power detrended")
-    # axes[1].set_xlabel("Frequency [{}Hz]".format(chr(956)))
-    # axes[0].title("Detrended")
-    plt.xlabel("Frequency [{}Hz]".format(chr(956)))
-    plt.title("Detrended")
+    fig, ax = plt.subplots(nrows=2, sharex=True)
+    ax[0].plot(x, np.log(y), "r-", linewidth=0.5)
+    ax[0].plot(x, leg_val, "--b", label=f"Order: {order}")
+    ax[0].legend()
+    ax[0].set_ylabel(f"Power [ppm$^{str({2})}$/{chr(956)}Hz]")
+    ax[1].plot(x, detrended, "r-", linewidth=0.5, label=ints)
+    ax[1].legend()
+    ax[1].set_ylabel("Power detrended [A.U]")
+    ax[1].set_xlabel(f"Frequency [{chr(956)}Hz]")
+    ax[0].set_title("Legendre detrended pseudomode range")
+    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/legendre_fit_int_{ints}.png")
 
 
-def plot_power_spectrum(ps_freqs, ps_powers, peak_freqs, peak_heights, ints):
-    currentfig = plt.gcf().number + 1
+def plot_power_spectrum(
+    freqs, powers, peak_freqs, peak_heights, ints, star, output_dir
+):
     cmap = plt.get_cmap("tab10")
+    fig, ax = plt.subplots()
 
-    # ps_peaks = find_peaks(powers, height)
-    # peaks = [freqs[i] for i in ps_peaks[0]]
-    # peak_heights = [i for i in peaks[1]["peak_heights"]]
-    for i in range(len(ps_freqs)):
-        fig = plt.figure(currentfig)
-        plt.plot(ps_freqs[i], ps_powers[i], label=ints[i], linewidth=0.7, c=cmap(i))
-        plt.plot(peak_freqs[i], peak_heights[i], "x", color="tab:red")
-        # plt.xlabel('1/Frequency [{}Hz00b1]'.format(chr(956)))
-        plt.xlabel("1/Frequency [{}Hz$^{}$]".format(chr(956), "{-1}"))
-        # plt.xlabel('1/Frequency [{}Hz $\mathregular{^{-1}}$]'.format(chr(956)))
-        plt.ylabel("Power")
-        plt.legend()
+    for i in range(len(freqs)):
+        ax.plot(freqs[i], powers[i], label=ints[i], linewidth=0.7, c=cmap(i))
+        ax.plot(peak_freqs[i], peak_heights[i], "x", color="tab:red")
+        ax.set(xlabel=f"1/Frequency [{chr(956)}Hz$^{{-1}}$]", ylabel="Power [A.U.]")
+        ax.legend()
+
+    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/FT_power_spectrum.png")

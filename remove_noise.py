@@ -14,7 +14,7 @@ def get_subsection(lightcurve, timearr):
 
     # Truncate into 4 day sections into whole_lst
     whole_lst = [
-        len(lightcurve.truncate(i, i + 4)) 
+        len(lightcurve.truncate(i, i + 4))
         for i in range(int(timearr[0]), int(timearr[-1]), 4)
     ]
 
@@ -22,10 +22,8 @@ def get_subsection(lightcurve, timearr):
     mode_len = mode(whole_lst)
 
     # Split lightcurve into sections of mode_len
-    subsec = [
-        lightcurve[j : j + mode_len] for j in range(0, len(lightcurve), mode_len)
-    ]
-    
+    subsec = [lightcurve[j : j + mode_len] for j in range(0, len(lightcurve), mode_len)]
+
     # Remove final value from array (which is not of the same length?)
     subsec.pop(-1)
     return subsec
@@ -52,9 +50,7 @@ def remove_noise(sections, N=None, plot_noise=False):
     """
 
     # Get signal to noise ratio values
-    snrs = [
-        signal_to_noise(sec.flux.value, axis=0, ddof=0) for sec in sections
-    ]
+    snrs = [signal_to_noise(sec.flux.value, axis=0, ddof=0) for sec in sections]
 
     # Sort the snrs list in order of smallest to largest
     snrs = np.array(snrs)
@@ -62,33 +58,18 @@ def remove_noise(sections, N=None, plot_noise=False):
 
     percentage = 0.08
     noise_div = percentage * (max(snrs_sort) - min(snrs_sort))
-    
-    
-    # Plotting noise vs time arrays
-    if plot_noise:
-        currentfig = plt.gcf().number + 1
-        fig = plt.figure(currentfig)
-        x = np.linspace(1,len(snrs_sort),len(snrs_sort))
-        plt.axhline(mean(snrs_sort), color='r')
-        plt.text(5, mean(snrs_sort), 'Mean')
-        plt.axhline(mean(snrs_sort) + noise_div)
-        plt.text(5, (mean(snrs_sort) + noise_div), 'Noise deviation')
-        plt.scatter(x,snrs_sort)
-        plt.xlabel('Sorted time arrays')
-        plt.ylabel('Noise')
-    
+
     # Remove upper few from sorted signal_to_noise list
     if N == None:
-        not_noisy_lst = [
-            i for i in snrs_sort if i < (mean(snrs_sort) + noise_div)
-        ]
+        not_noisy_lst = [i for i in snrs_sort if i < (mean(snrs_sort) + noise_div)]
         N = len(snrs_sort) - len(not_noisy_lst)
 
-    #print("Number of noisy sections removed: ", N)
+    # print("Number of noisy sections removed: ", N)
 
     # Find the index of the last N number of noisiest signals
     noisy = [
-        np.where(snrs == snrs_sort[i])[0][0] for i in range(len(snrs_sort) - N, len(snrs_sort))
+        np.where(snrs == snrs_sort[i])[0][0]
+        for i in range(len(snrs_sort) - N, len(snrs_sort))
     ]
 
     # Find the index of the signals up to last series - N
@@ -98,5 +79,3 @@ def remove_noise(sections, N=None, plot_noise=False):
 
     not_noisy = np.sort(not_noisy)
     return not_noisy
-
-

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial import legendre as L
-import matplotlib.pyplot as plt
+import pandas as pd
 
 
 def pseudo_range(freq_edge, ps_edge, peak_freqs, delta_nu, init_int, fin_int):
@@ -67,6 +68,6 @@ def legendre_detrend(x, y, order):
     leg_val = L.legval(x, leg_fit)
     detrended = np.log(y) - leg_val
 
-    detrend_dict = {"leg_fit": leg_fit, "leg_val": leg_val, "detrended": detrended}
+    detrend_dict = {"leg_val": leg_val, "detrended": detrended}
 
     return detrend_dict

@@ -5,6 +5,13 @@ import numpy as np
 from numpy.polynomial import legendre as L
 
 
+def plot_time_series(lc, star):
+    fig, ax = plt.subplots()
+    lc.plot(ax=ax)
+    fig.savefig(f"time_series_{star}.png")
+    # fig.savefig(f"{outputdir}/time_series_{star}.png")
+
+
 def plot_pseudo_range(freq_edge, ps_edge, pseu_freqs, pseu_pow, first_peak):
     """
     Plot pseudomode range. freq_edge and ps_edge are the smoothed (with edges
@@ -12,15 +19,27 @@ def plot_pseudo_range(freq_edge, ps_edge, pseu_freqs, pseu_pow, first_peak):
     range frequency and power lists first_peak is index of where first peak in
     range occurs.
     """
-    currentfig = plt.gcf().number + 1
-    fig = plt.figure(currentfig)
+    # currentfig = plt.gcf().number + 1
+    # fig = plt.figure(currentfig)
 
-    plt.plot(freq_edge, ps_edge, "r-", linewidth=1)
-    plt.plot(freq_edge[first_peak], ps_edge[first_peak], "x")
-    plt.xlabel("Frequency [{}Hz]".format(chr(956)))
-    plt.ylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
-    for i in reversed(range(0, len(pseu_freqs))):
-        plt.plot(pseu_freqs[i], pseu_pow[i], linewidth=0.5)
+    fig, ax = plt.subplots()
+    ax.plot(freq_edge, ps_edge, "r-", linewidth=1)
+    ax.plot(freq_edge[first_peak], ps_edge[first_peak], "x")
+    ax.set_xlabel("Frequency [{}Hz]".format(chr(956)))
+    ax.set_ylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
+    ax.set(
+        xlabel=f"Frequency [{chr(956)}Hz]",
+        ylabel=f"Power [ppm$^{str({2})}$/{chr(956)}Hz]",
+    )
+    for i in reversed(range(len(pseu_freqs))):
+        ax.plot(pseu_freqs[i], pseu_pow[i], linewidth=0.5)
+
+    # plt.plot(freq_edge, ps_edge, "r-", linewidth=1)
+    # plt.plot(freq_edge[first_peak], ps_edge[first_peak], "x")
+    # plt.xlabel("Frequency [{}Hz]".format(chr(956)))
+    # plt.ylabel("Power [ppm$^{}$/{}Hz]".format(str({2}), chr(956)))
+    # for i in reversed(range(0, len(pseu_freqs))):
+    #    plt.plot(pseu_freqs[i], pseu_pow[i], linewidth=0.5)
 
 
 def plot_legendre(x, y, leg_val, detrended, order, ints):
@@ -51,7 +70,6 @@ def plot_power_spectrum(ps_freqs, ps_powers, peak_freqs, peak_heights, ints):
     # ps_peaks = find_peaks(powers, height)
     # peaks = [freqs[i] for i in ps_peaks[0]]
     # peak_heights = [i for i in peaks[1]["peak_heights"]]
-
     for i in range(len(ps_freqs)):
         fig = plt.figure(currentfig)
         plt.plot(ps_freqs[i], ps_powers[i], label=ints[i], linewidth=0.7, c=cmap(i))

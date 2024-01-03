@@ -27,6 +27,14 @@ def remove_edge(convolved, frqs, percent):
     return ps_edge, freq_edge
 
 
+def give_peaks(x, y, height, distance=None):
+    peaks = find_peaks(y, height=height, distance=distance)
+    peak_vals = [x[i] for i in peaks[0]]
+    peak_heights = [i for i in peaks[1]["peak_heights"]]
+
+    return peak_vals, peak_heights
+
+
 def plot_smoothed(
     frq, pow_avg, pow_smooth, frq_edge, pow_smooth_edge, peak_frq, peak_heights
 ):
@@ -36,7 +44,7 @@ def plot_smoothed(
     freqedge, pow_smooth_edge are the smoothed with edges removed frequency and power arrays,
     peak_frq, peak_heights are the frequencies and heights of the peaks in the power spectrum.
     """
-    
+
     # Plotting the smoothed lightkurve power spectra###
     fig, axs = plt.subplots(2, sharex=True)
     axs[0].plot(frq, pow_avg, linewidth=0.5)

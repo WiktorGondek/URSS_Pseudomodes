@@ -8,13 +8,12 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import numpy as np
 from numpy.polynomial import legendre as L
-import pandas as pd
 from pathlib import Path
 import pickle
 from scipy.signal import find_peaks
 import sys
 
-from autocorrelation import get_values
+from autocorrelation import get_values, return_ac_freqs, ac_linear_fit
 from plotting import (
     plot_time_series,
     plot_smoothed,
@@ -22,13 +21,17 @@ from plotting import (
     plot_legendre,
     plot_power_spectrum,
     plot_autocorrelation,
+    plot_ac_linear_fit,
 )
 from pseudo_range import pseudo_range, legendre_detrend
 from remove_noise import get_subsection, remove_noise
 from smoothing import remove_edge, give_peaks
 
 
-def get_time_series(star, output_file):
+def get_time_series(star):
+    """
+    Get time series for a given star using lightkurve to search for the star.
+    """
     # star = "KIC 7799349"
 
     # Search for star
@@ -48,10 +51,6 @@ def get_time_series(star, output_file):
         .fill_gaps()
     )
 
-    # Plot full timeseries
-    fig, ax = plt.subplots()
-    lc.plot(ax=ax)
-    fig.savefig(output_file)
     return lc
 
 
@@ -74,35 +73,19 @@ def create_power_spectra(sub_ts, not_noisy_ts, min_freq, max_freq):
     return pg_whole
 
 
-# def get_arrays(pseudo_freqs, pseudo_power):
-#    leg_fit = legendre_detrend(pseudo_freqs, pseudo_power, order=2)
-#
-#    freq_rescale = pseudo_freqs * 1e-6
-#
-#    power_spectrum = LombScargle(freq_rescale, leg_fit["detrended"]).autopower(
-#        samples_per_peak=1, nyquist_factor=1
-#    )
-#
-#    ps_freqs = power_spectrum[0]
-#    ps_powers = power_spectrum[1]
-#
-#   ps_peaks = give_peaks(ps_freqs, ps_powers, height=0.2)
-#
-#    array_dict = {
-#        "leg_fit": leg_fit,
-#        "freq_rescale": freq_rescale,
-#        "ps_freqs": ps_freqs,
-#       "ps_powers": ps_powers,
-#       "ps_peaks": ps_peaks,
-#    }
+def get_ft_peak_freqs(peaks_list):
+    """
+    Get the frequency of peaks from FT of power spectra. peaks_list is the list
+    of peaks.
+    """
+    peak_freqs = [1 / peak for peak in peaks_list]
 
-#   return array_dict
+    return peak_freqs
 
 
-def main(star, output_dir, cache=True):
-    output_dir_name = f"{output_dir}_{star.replace(' ','_')}"
-    if not Path(output_dir_name).exists():
-        Path(output_dir_name).mkdir(exist_ok=True, parents=True)
+def main(star, p_mode_spacing, output_dir, cache=True):
+    if not Path(output_dir).exists():
+        Path(output_dir).mkdir(exist_ok=True, parents=True)
 
     # Load file from cache if it exists
     cache_file = Path(f".{star.lower().replace(' ', '_')}.pkl")
@@ -110,10 +93,11 @@ def main(star, output_dir, cache=True):
         with open(cache_file, "rb") as fh:
             lc = pickle.load(fh)
     else:
-        lc = get_time_series(star, output_file)
+        lc = get_time_series(star)
         with open(cache_file, "wb") as fh:
             pickle.dump(lc, fh)
 
+    # Plot time series
     plot_time_series(lc, star, output_dir)
 
     # Obtain flux and time values from time series
@@ -162,10 +146,10 @@ def main(star, output_dir, cache=True):
         output_dir,
     )
 
-    dnu = 33.77942877988895
-
     # Defining the pseudomode range
-    p_dict = pseudo_range(freq_edge, ps_edge, peak_vals, dnu, init_int=5, fin_int=7)
+    p_dict = pseudo_range(
+        freq_edge, ps_edge, peak_vals, p_mode_spacing, init_int=5, fin_int=7
+    )
     pseudo_freqs, pseudo_power, first_peak, integer, difference = (
         p_dict["freqs"],
         p_dict["power"],
@@ -190,9 +174,6 @@ def main(star, output_dir, cache=True):
 
         detrended.append(leg_fit["detrended"])
 
-        # Rescaling the frequencies to be used in LombScargle
-        freq_rescale = pseudo_freqs[i] * 1e-6
-
         # Plotting Legendre fits
         plot_legendre(
             pseudo_freqs[i],
@@ -207,7 +188,7 @@ def main(star, output_dir, cache=True):
 
         # Performing FT of power spectra
         ft_power_spectra.append(
-            LombScargle(freq_rescale, leg_fit["detrended"]).autopower(
+            LombScargle(pseudo_freqs[i], leg_fit["detrended"]).autopower(
                 samples_per_peak=1, nyquist_factor=1
             )
         )
@@ -225,6 +206,18 @@ def main(star, output_dir, cache=True):
     ps_peak_freqs = [i[0] for i in ps_peaks]
     ps_peak_powers = [i[1] for i in ps_peaks]
 
+    ps_peaks = [get_ft_peak_freqs(peak_list) for peak_list in ps_peak_freqs]
+
+    ps_output = f"{output_dir}/ft_peaks.txt"
+    with open(ps_output, "w") as file:
+        for i, peak_list in zip(integer, ps_peaks):
+            file.write(
+                f"integer {i}: "
+                + ", ".join(str(peak) for peak in peak_list)
+                + f" {chr(956)}Hz"
+                + "\n"
+            )
+
     # Plotting power spectrum
     plot_power_spectrum(
         ps_freqs, ps_powers, ps_peak_freqs, ps_peak_powers, integer, star, output_dir
@@ -232,19 +225,28 @@ def main(star, output_dir, cache=True):
 
     # Create autocorrelation dictionary
     auto_dict = {}
-    for i, val in zip(integer, detrended):
-        auto_dict[f"integer_{i}"] = get_values(val, difference)
+    for i, powers_arr in zip(integer, detrended):
+        auto_dict[f"{i}"] = get_values(powers_arr, difference)
 
     # Plot autocorrelation
-    plot_autocorrelation(auto_dict, integer)
+    plot_autocorrelation(auto_dict, star, output_dir)
 
-    plt.show()
+    # Return and save the autocorrelation peak frequncies and their differences
+    # to a file
+    return_ac_freqs(auto_dict, f"{output_dir}/ac_peak_freqs.txt")
+
+    # Perform linear fits on autocorrelation data
+    auto_dict = ac_linear_fit(auto_dict)
+
+    # Plot linear fits on autocorrelation data
+    plot_ac_linear_fit(auto_dict, star, output_dir)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("star")
+    parser.add_argument("p_mode_spacing")
     parser.add_argument("output_dir")
     args = parser.parse_args()
 
-    main(args.star, args.output_dir)
+    main(args.star, float(args.p_mode_spacing), args.output_dir)

@@ -3,7 +3,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial import legendre as L
-import pandas as pd
 
 
 def pseudo_range(freq_edge, ps_edge, peak_freqs, delta_nu, init_int, fin_int):

@@ -8,20 +8,20 @@ from numpy.polynomial import legendre as L
 def plot_time_series(lc, star, output_dir):
     """
     Plot time series of star. lc is the light curve object containing the time
-    series, star is the name of the star imported, and output_dir is the final
-    output directory.
+    series, star is the name of the star and output_dir is where the figure is
+    saved to.
     """
 
     fig, ax = plt.subplots()
     lc.plot(ax=ax)
-    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/time_series.png")
+    fig.savefig(f"{output_dir}/time_series.png")
 
 
 def plot_smoothed(
-    frq,
+    freqs,
     pow_avg,
     pow_smooth,
-    frq_edge,
+    freq_edge,
     pow_smooth_edge,
     peak_frq,
     peak_heights,
@@ -29,18 +29,20 @@ def plot_smoothed(
     output_dir,
 ):
     """Plot unsmoothed and smoothed power spectra showing peaks.
-    frq,pow_avg are the frequency and power lists,
+    freqs, pow_avg are the frequency and power lists,
     pow_smooth is the smoothed power list,
     freqedge, pow_smooth_edge are the smoothed with edges removed frequency and power arrays,
-    peak_frq, peak_heights are the frequencies and heights of the peaks in the power spectrum.
+    peak_frq, peak_heights are the frequencies and heights of the peaks in the
+    power spectrum. Star is the name of the star and output_dir is where the
+    figure is saved to.
     """
 
     # Plotting the smoothed lightkurve power spectra###
     fig, ax = plt.subplots(2, sharex=True)
-    ax[0].plot(frq, pow_avg, linewidth=0.5)
+    ax[0].plot(freqs, pow_avg, linewidth=0.5)
     ax[0].set_title("Averaged power spectrum")
-    ax[1].plot(frq, pow_smooth, linewidth=0.5)
-    ax[1].plot(frq_edge, pow_smooth_edge, "r-", linewidth=0.5)
+    ax[1].plot(freqs, pow_smooth, linewidth=0.5)
+    ax[1].plot(freq_edge, pow_smooth_edge, "r-", linewidth=0.5)
     ax[1].plot(peak_frq, peak_heights, "x")
     ax[1].set_title("Smoothed averaged power spectrum")
     ax[1].set(
@@ -58,7 +60,8 @@ def plot_pseudo_range(
     Plot pseudomode range. freqs and power are the smoothed (with edges
     removed) frequency and power arrays, pseu_freqs, pseu_power are the pseudomode
     range frequency and power lists, first_peak is index of where first peak in
-    range occurs.
+    range occurs. star is the name of the star and output_dir is where the
+    figure is saved to.
     """
 
     fig, ax = plt.subplots()
@@ -71,14 +74,15 @@ def plot_pseudo_range(
     ax.set_title("Pseudomode range")
     for i in reversed(range(len(pseu_freqs))):
         ax.plot(pseu_freqs[i], pseu_power[i], linewidth=0.5)
-    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/pseudo_range.png")
+    fig.savefig(f"{output_dir}/pseudo_range.png")
 
 
 def plot_legendre(x, y, leg_val, detrended, order, ints, star, output_dir):
     """
     Plotting smoothed spectra in pseudomode range with legendre fits and detrending.
-    x,y are x and y data, order is the polynomial order, ints is the list
-    integer p-mode spacings, plotting boolean, if True will plot
+    x, y are x and y data, order is the polynomial order, ints is the list of
+    integer p-mode spacings. star is the name of the star and output_dir is
+    where the figure is saved to.
     """
 
     fig, ax = plt.subplots(nrows=2, sharex=True)
@@ -91,12 +95,18 @@ def plot_legendre(x, y, leg_val, detrended, order, ints, star, output_dir):
     ax[1].set_ylabel("Power detrended [A.U]")
     ax[1].set_xlabel(f"Frequency [{chr(956)}Hz]")
     ax[0].set_title("Legendre detrended pseudomode range")
-    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/legendre_fit_int_{ints}.png")
+    fig.savefig(f"{output_dir}/legendre_fit_int_{ints}.png")
 
 
 def plot_power_spectrum(
     freqs, powers, peak_freqs, peak_heights, ints, star, output_dir
 ):
+    """Plots the FT of power spectrum. freqs, powers are the input frequencies
+    and powers. peak_freqs and peak_heights are the frequencies and heights of
+    the peaks in the spectrum, ints is the list of integer p-mode spacings, star is the
+    name of the star and output_dir is where the figure is saved to.
+    """
+
     cmap = plt.get_cmap("tab10")
     fig, ax = plt.subplots()
 
@@ -106,41 +116,65 @@ def plot_power_spectrum(
         ax.set(xlabel=f"1/Frequency [{chr(956)}Hz$^{{-1}}$]", ylabel="Power [A.U.]")
         ax.legend()
 
-    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/FT_power_spectrum.png")
+    fig.savefig(f"{output_dir}/FT_power_spectrum.png")
 
 
-def plot_autocorrelation(auto_dict, ints, together=True):
-    if together:
-        fig, ax = plt.subplots()
-        for i, key in zip(ints, auto_dict):
-            a = auto_dict[key]
-            lagstofreq = a["lags_to_freq"]
-            autocorr = a["auto_corr"]
-            acpeakvals = a["ac_peak_vals"]
-            acpeakheights = a["ac_peak_heights"]
+def plot_autocorrelation(auto_dict, star, output_dir):
+    """
+    Plots the autocorrelation of the pseudomode range. auto_dict is the
+    dictionary of autocorrelation values needed to generate plot.
+    """
 
-            ax.plot(lagstofreq, autocorr, linewidth=0.5, label=i)
-            ax.plot(acpeakvals, acpeakheights, "x", color="tab:red")
-            ax.set(
-                title="Autocorrelation",
-                xlabel=f"Lags [{chr(956)}Hz]",
-                ylabel="Amplitude [A.U.]",
-            )
-            ax.legend()
-    else:
-        for i, key in zip(ints, auto_dict):
-            fig, ax = plt.subplots()
-            a = auto_dict[key]
-            lagstofreq = a["lags_to_freq"]
-            autocorr = a["auto_corr"]
-            acpeakvals = a["ac_peak_vals"]
-            acpeakheights = a["ac_peak_heights"]
+    fig, ax = plt.subplots()
+    for i, a in auto_dict.items():
+        lags_to_freq = a["lags_to_freq"]
+        autocorr = a["auto_corr"]
+        ac_peak_vals = a["ac_peak_vals"]
+        ac_peak_heights = a["ac_peak_heights"]
 
-            ax.plot(lagstofreq, autocorr, linewidth=0.5, label=i)
-            ax.plot(acpeakvals, acpeakheights, "x", color="tab:red")
-            ax.set(
-                title="Autocorrelation",
-                xlabel=f"Lags [{chr(956)}Hz]",
-                ylabel="Amplitude [A.U.]",
-            )
-            ax.legend()
+        ax.plot(lags_to_freq, autocorr, linewidth=0.5, label=i)
+        ax.plot(ac_peak_vals, ac_peak_heights, "x", color="tab:red")
+        ax.set(
+            title="Autocorrelation",
+            xlabel=f"Lags [{chr(956)}Hz]",
+            ylabel="Amplitude [A.U.]",
+        )
+        ax.legend()
+
+    fig.savefig(f"{output_dir}/autocorrelation.png")
+
+
+def plot_ac_linear_fit(auto_dict, star, output_dir):
+    """Plots a linear fit to the peaks vs frequencies in the autocorrelation
+    plot. auto_dict is the dictionary of autocorrelation values needed to
+    genreate the plots
+    """
+
+    for i, a in auto_dict.items():
+        fig, ax = plt.subplots(nrows=2, sharex=False)
+        lags_to_freq = a["lags_to_freq"]
+        autocorr = a["auto_corr"]
+        ac_peak_vals = a["ac_peak_vals"]
+        ac_peak_heights = a["ac_peak_heights"]
+        zero_idx = a["zero_idx"]
+        x = a["x_values"]
+        y_fitted = a["y_fitted"]
+        gradient = a["gradient"]
+        errbar = a["err_bar"]
+
+        ax[0].plot(
+            lags_to_freq[zero_idx - 1 :],
+            autocorr[zero_idx - 1 :],
+            linewidth=0.5,
+            label=i,
+        )
+        ax[0].plot(ac_peak_vals, ac_peak_heights, "x", color="tab:red")
+        ax[0].set(xlabel=f"Lags [{chr(956)}Hz]", ylabel="Amplitude")
+        ax[0].legend()
+
+        ax[1].scatter(x, ac_peak_vals)
+        label = f"Gradient: {round(gradient,1)} u\u00B1 {round(errbar,1)} {chr(956)}Hz"
+        ax[1].plot(x, y_fitted, "--g", label=label)
+        ax[1].set(xlabel="Peak", ylabel=f"Lags [{chr(956)}Hz]")
+        ax[1].legend()
+        fig.savefig(f"{output_dir}/ac_linear_fit_int_{i}.png")

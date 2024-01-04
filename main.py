@@ -21,6 +21,7 @@ from plotting import (
     plot_pseudo_range,
     plot_legendre,
     plot_power_spectrum,
+    plot_autocorrelation,
 )
 from pseudo_range import pseudo_range, legendre_detrend
 from remove_noise import get_subsection, remove_noise
@@ -73,31 +74,29 @@ def create_power_spectra(sub_ts, not_noisy_ts, min_freq, max_freq):
     return pg_whole
 
 
-def get_arrays(pseudo_freqs, pseudo_power):
-    leg_fit = legendre_detrend(pseudo_freqs, pseudo_power, order=2)
+# def get_arrays(pseudo_freqs, pseudo_power):
+#    leg_fit = legendre_detrend(pseudo_freqs, pseudo_power, order=2)
+#
+#    freq_rescale = pseudo_freqs * 1e-6
+#
+#    power_spectrum = LombScargle(freq_rescale, leg_fit["detrended"]).autopower(
+#        samples_per_peak=1, nyquist_factor=1
+#    )
+#
+#    ps_freqs = power_spectrum[0]
+#    ps_powers = power_spectrum[1]
+#
+#   ps_peaks = give_peaks(ps_freqs, ps_powers, height=0.2)
+#
+#    array_dict = {
+#        "leg_fit": leg_fit,
+#        "freq_rescale": freq_rescale,
+#        "ps_freqs": ps_freqs,
+#       "ps_powers": ps_powers,
+#       "ps_peaks": ps_peaks,
+#    }
 
-    freq_rescale = pseudo_freqs * 1e-6
-
-    power_spectrum = LombScargle(freq_rescale, leg_fit["detrended"]).autopower(
-        samples_per_peak=1, nyquist_factor=1
-    )
-
-    ps_freqs = power_spectrum[0]
-    ps_powers = power_spectrum[1]
-
-    ps_peaks = give_peaks(ps_freqs, ps_powers, height=0.2)
-
-    array_dict = {
-        "leg_fit": leg_fit,
-        "freq_rescale": freq_rescale,
-        "ps_freqs": ps_freqs,
-        "ps_powers": ps_powers,
-        "ps_peaks": ps_peaks,
-    }
-
-    return array_dict
-
-    # return (leg_fit, freq_rescale, power_spectrum, ps_freqs, ps_powers, ps_peaks)
+#   return array_dict
 
 
 def main(star, output_dir, cache=True):
@@ -167,11 +166,12 @@ def main(star, output_dir, cache=True):
 
     # Defining the pseudomode range
     p_dict = pseudo_range(freq_edge, ps_edge, peak_vals, dnu, init_int=5, fin_int=7)
-    pseudo_freqs, pseudo_power, first_peak, integer = (
+    pseudo_freqs, pseudo_power, first_peak, integer, difference = (
         p_dict["freqs"],
         p_dict["power"],
         p_dict["first_peak"],
         p_dict["integer"],
+        p_dict["diff"],
     )
 
     # Plotting the pseudomode range
@@ -181,10 +181,15 @@ def main(star, output_dir, cache=True):
 
     # Defining list of power spectra
     ft_power_spectra = []
+    # Defining list of detrended powers
+    detrended = []
 
     for i in range(len(integer)):
         # Performing Legendre detrend on each pseudo frequency range
         leg_fit = legendre_detrend(pseudo_freqs[i], pseudo_power[i], order=2)
+
+        detrended.append(leg_fit["detrended"])
+
         # Rescaling the frequencies to be used in LombScargle
         freq_rescale = pseudo_freqs[i] * 1e-6
 
@@ -225,20 +230,15 @@ def main(star, output_dir, cache=True):
         ps_freqs, ps_powers, ps_peak_freqs, ps_peak_powers, integer, star, output_dir
     )
 
+    # Create autocorrelation dictionary
+    auto_dict = {}
+    for i, val in zip(integer, detrended):
+        auto_dict[f"integer_{i}"] = get_values(val, difference)
+
+    # Plot autocorrelation
+    plot_autocorrelation(auto_dict, integer)
+
     plt.show()
-
-
-# df = pd.DataFrame(
-#    [get_values(val) for val in leg_fit[i]['detrended'],
-#    columns=(
-#        "auto_corr",
-#        "lags",
-#        "lags_to_freq",
-#        "zero_idx",
-#        "ac_peak_vals",
-#        "delta_nus",
-#    )
-# )
 
 
 if __name__ == "__main__":

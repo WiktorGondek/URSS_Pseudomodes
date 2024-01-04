@@ -28,13 +28,13 @@ def remove_edge(convolved, frqs, percent):
     return ps_edge, freq_edge
 
 
-def give_peaks(x, y, height, distance=None):
+def give_peaks(x, y, height, distance=None, threshold=None):
     """
     Return the peaks of a given dataset. x, y is the sample dataset, height and
     distance are arguments given in the find_peaks function.
     """
 
-    peaks = find_peaks(y, height=height, distance=distance)
+    peaks = find_peaks(y, height=height, threshold=threshold, distance=distance)
     peak_vals = [x[i] for i in peaks[0]]
     peak_heights = [i for i in peaks[1]["peak_heights"]]
 

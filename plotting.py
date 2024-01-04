@@ -107,3 +107,40 @@ def plot_power_spectrum(
         ax.legend()
 
     fig.savefig(f"{output_dir}_{star.replace(' ','_')}/FT_power_spectrum.png")
+
+
+def plot_autocorrelation(auto_dict, ints, together=True):
+    if together:
+        fig, ax = plt.subplots()
+        for i, key in zip(ints, auto_dict):
+            a = auto_dict[key]
+            lagstofreq = a["lags_to_freq"]
+            autocorr = a["auto_corr"]
+            acpeakvals = a["ac_peak_vals"]
+            acpeakheights = a["ac_peak_heights"]
+
+            ax.plot(lagstofreq, autocorr, linewidth=0.5, label=i)
+            ax.plot(acpeakvals, acpeakheights, "x", color="tab:red")
+            ax.set(
+                title="Autocorrelation",
+                xlabel=f"Lags [{chr(956)}Hz]",
+                ylabel="Amplitude [A.U.]",
+            )
+            ax.legend()
+    else:
+        for i, key in zip(ints, auto_dict):
+            fig, ax = plt.subplots()
+            a = auto_dict[key]
+            lagstofreq = a["lags_to_freq"]
+            autocorr = a["auto_corr"]
+            acpeakvals = a["ac_peak_vals"]
+            acpeakheights = a["ac_peak_heights"]
+
+            ax.plot(lagstofreq, autocorr, linewidth=0.5, label=i)
+            ax.plot(acpeakvals, acpeakheights, "x", color="tab:red")
+            ax.set(
+                title="Autocorrelation",
+                xlabel=f"Lags [{chr(956)}Hz]",
+                ylabel="Amplitude [A.U.]",
+            )
+            ax.legend()

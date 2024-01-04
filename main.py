@@ -212,7 +212,7 @@ def main(star, p_mode_spacing, output_dir, cache=True):
     with open(ps_output, "w") as file:
         for i, peak_list in zip(integer, ps_peaks):
             file.write(
-                f"integer {i}: "
+                f"integer spacing {i}: "
                 + ", ".join(str(peak) for peak in peak_list)
                 + f" {chr(956)}Hz"
                 + "\n"

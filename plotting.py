@@ -50,7 +50,7 @@ def plot_smoothed(
         ylabel=f"Power [ppm$^{str({2})}$/{chr(956)}Hz]",
     )
     ax[0].set(ylabel=f"Power [ppm$^{str({2})}$/{chr(956)}Hz]")
-    fig.savefig(f"{output_dir}_{star.replace(' ','_')}/smoothed.png")
+    fig.savefig(f"{output_dir}/smoothed.png")
 
 
 def plot_pseudo_range(
